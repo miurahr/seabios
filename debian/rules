@@ -18,7 +18,7 @@ build build-arch build-indep: $(BUILD_TARGETS)
 
 bios.bin:
 	dh_testdir
-	$(MAKE) src/acpi-dsdt.hex
+	$(MAKE) out/acpi-dsdt.hex
 	$(MAKE) out/bios.bin
 	mv out/bios.bin bios.bin
 

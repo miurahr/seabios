@@ -1,3 +1,10 @@
+seabios (1.7.0-git20120721) precise; urgency=low
+
+  * git snapshot package.
+  * vbe edid support.
+
+ -- Hiroshi Miura <miurahr@linux.com>  Sat, 21 Jul 2012 06:31:17 +0900
+
 seabios (1.7.0-1) unstable; urgency=low
 
   * new upstream release (1.7.0), featuring vgabios.
