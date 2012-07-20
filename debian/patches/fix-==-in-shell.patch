@@ -1,0 +1,20 @@
+Upstream script does not work with POSIX /bin/sh due to usage
+of [ foo == bar ] instead of [ foo = bar ].  This change is
+in upstream git already so should be removed for the next
+release.
+
+   -- mjt
+
+diff --git a/tools/buildversion.sh b/tools/buildversion.sh
+index 9b301e6..c8c1725 100755
+--- a/tools/buildversion.sh
++++ b/tools/buildversion.sh
+@@ -15,7 +15,7 @@ VERSION="${VERSION}-`date +"%Y%m%d_%H%M%S"`-`hostname`"
+ echo "Version: ${VERSION}"
+ 
+ # Build header file
+-if [ "$VAR16MODE" == "VAR16" ]; then
++if [ "$VAR16MODE" = "VAR16" ]; then
+     cat > ${OUTFILE} <<EOF
+ #include "types.h"
+ char VERSION[] VAR16 = "${VERSION}";

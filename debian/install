@@ -1,0 +1,3 @@
+bios.bin usr/share/seabios
+vgabios-*.bin usr/share/seabios
+debian/optionrom/*.bin usr/share/seabios/optionrom
