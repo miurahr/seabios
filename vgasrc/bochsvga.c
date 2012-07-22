@@ -15,7 +15,7 @@
 #include "stdvga.h" // VGAREG_SEQU_ADDRESS
 #include "pci.h" // pci_config_readl
 #include "pci_regs.h" // PCI_BASE_ADDRESS_0
-
+#include "vbe_edid.h"
 
 /****************************************************************
  * Mode tables
@@ -323,69 +323,7 @@ bochsvga_set_mode(struct vgamode_s *vmode_g, int flags)
     return 0;
 }
 
-/****************************************************************
- * EDID
- ****************************************************************/
 
-u8 bochsvga_edid[128] VAR16 = {
-    0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, /* 8-byte header */
-    0x04, 0x21,                                     /* Vendor ID ("AAA") */
-    0xAB, 0xCD,                                     /* Product ID */
-    0x00, 0x00, 0x00, 0x00,                         /* Serial number */
-    54,                                             /* Week of manufacture (54) */
-    10,                                             /* Year of manufacture (2000) */
-    0x01, 0x01,                                     /* EDID version number (1.1) */
-    0x0F,                                           /* Video signal interface */
-    0x21, 0x19,                                     /* Scren size (330 mm * 250 mm) */
-    0x78,                                           /* Display gamma (2.2) */
-    0x0D,                                           /* Feature flags */
-    0x78, 0xF5,                                     /* Chromaticity LSB */
-    0xA6, 0x55, 0x48, 0x9B, 0x26, 0x12, 0x50, 0x54, /* Chromaticity MSB */
-    0xFF, 0xEF, 0x80,                               /* Established timings */
-    0x31, 0x59,                                     /* Standard timing #1 (640 x 480 @ 85 Hz) */
-    0x45, 0x59,                                     /* Standard timing #2 (800 x 600 @ 85 Hz) */
-    0x61, 0x59,                                     /* Standard timing #3 (1024 x 768 @ 85 Hz) */
-    0x31, 0x4A,                                     /* Standard timing #4 (640 x 480 @ 70 Hz) */
-    0x81, 0x4A,                                     /* Standard timing #5 (1280 x 960 @ 70 Hz) */
-    0xA9, 0x40,                                     /* Standard timing #6 (1600 x 1200 @ 60 Hz) */
-    0x01, 0x01,                                     /* Standard timing #7 (unused) */
-    0x01, 0x01,                                     /* Standard timing #8 (unused) */
-
-    /* First timing descriptor (1024 x 768) */
-    0x30, 0x2a,                                     /* Pixel clock */
-    0x80,                                           /* hactive low */
-    0xC0,                                           /* hblank low */
-    0x41,                                           /* hactive high, hblank high */
-    0x60,                                           /* vactive low */
-    0x24,                                           /* vblank low  */
-    0x30,                                           /* vactive high, vblank high */
-    0x40,                                           /* hsync offset low */
-    0x80,                                           /* hsync width low */
-    0x13,                                           /* vsync offset low, vsync width low */
-    0x00,                                           /* hsync offset high, hsync width high , vsync offset high, vsync width high */
-    0x2C,                                           /* hsize low */
-    0xE1,                                           /* vsize low */
-    0x10,                                           /* hsize high, vsize high */
-    0x00,                                           /* hborder */
-    0x00,                                           /* vborder */
-    0x1E,                                           /* Features */
-
-    /* Second descriptor */
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00,
-
-    /* Third descriptor - Serial number */
-    0x00, 0x00, 0x00, 0xFF, 0x00,
-    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '\n', ' ', ' ',
-
-    /* Fourth descriptor - Monitor name */
-    0x00,0x00,0x00,0xFC,0x00,
-    'B', 'o', 'c', 'h', 's', ' ', 'S', 'c', 'r', 'e', 'e', 'n', '\n',
-
-    0x00,                                            /* Extensions */
-    0x00,                                            /* Checksum */
-};
 
 int bochsvga_get_ddc_capabilities(u16 unit)
 {
@@ -395,13 +333,127 @@ int bochsvga_get_ddc_capabilities(u16 unit)
     return (1 << 8) | VBE_DDC1_PROTOCOL_SUPPORTED;
 }
 
+u8 most_chromaticity[8] VAR16 = {0xA6,0x55,0x48,0x9B,0x26,0x12,0x50,0x54};
+unsigned char vgabios_name[] VAR16 = "SeaBIOS VGAB";
+
 int bochsvga_read_edid(u16 unit, u16 block, u16 seg, void *data)
 {
+    struct vbe_edid_info  *info = data;
+    int i;
+
     if (unit != 0 || block != 0)
         return -1;
 
-    memcpy_far(seg, data, get_global_seg(), bochsvga_edid,
-               sizeof (bochsvga_edid));
+    memset_far(seg, info, 0, sizeof(*info));
+    /* header */
+    SET_FARVAR(seg, info->header[0], 0);
+    for (i = 1; i < 7; i++) {
+        SET_FARVAR(seg, info->header[i], 0xFF);
+    }
+    SET_FARVAR(seg, info->header[7], 0);
+    /* Vendor/Product/Serial/Date */
+    SET_FARVAR(seg, info->vendor, WORDBE(0x0421));
+    SET_FARVAR(seg, info->product,WORDBE(0xABCD));
+    SET_FARVAR(seg, info->serial, DWORDBE(0));
+    /* date/version  */
+    SET_FARVAR(seg, info->week,54);
+    SET_FARVAR(seg, info->year,10); /* 2000 */
+    SET_FARVAR(seg, info->major_version,1);
+    SET_FARVAR(seg, info->minor_version,3); /* 1.3 */
+    /* video prameters */
+    SET_FARVAR(seg, info->video_setup,0x0F);
+    /* Video signal interface (analogue, 0.700 : 0.300 : 1.000 V p-p,
+       Video Setup: Blank Level = Black Level, Separate Sync H & V Signals are
+       supported, Composite Sync Signal on Horizontal is supported, Composite 
+       Sync Signal on Green Video is supported, Serration on the Vertical Sync
+       is supported) */
+    SET_FARVAR(seg, info->screen_width,0x21);
+    SET_FARVAR(seg, info->screen_height,0x19); /* 330 mm * 250 mm */
+    SET_FARVAR(seg, info->gamma,0x78); /* 2.2 */
+    SET_FARVAR(seg, info->feature_flag,0x0D); /* no DMPS states, RGB, display is continuous frequency */
+    SET_FARVAR(seg, info->least_chromaticity[0],0x78);
+    SET_FARVAR(seg, info->least_chromaticity[1],0xF5);
+    memcpy_far(seg, info->most_chromaticity, get_global_seg(), most_chromaticity,
+               sizeof (most_chromaticity));
+
+    SET_FARVAR(seg, info->established_timing[0], 0xFF);
+    SET_FARVAR(seg, info->established_timing[1], 0xEF);
+    SET_FARVAR(seg, info->established_timing[2], 0x80);
+    /* 720x400@70Hz, 720x400@88Hz, 640x480@60Hz, 640x480@67Hz, 640x480@72Hz, 640x480@75Hz,
+       800x600@56Hz, 800x600@60Hz, 800x600@72Hz, 800x600@75Hz, 832x624@75Hz, 1152x870@75Hz,
+       not 1024x768@87Hz(I), 1024x768@60Hz, 1024x768@70Hz, 1024x768@75Hz, 1280x1024@75Hz */
+    /* standard timings */
+    SET_FARVAR(seg, info->standard_timing[0], VBE_EDID_STD_640x480_85Hz);
+    SET_FARVAR(seg, info->standard_timing[1], VBE_EDID_STD_800x600_85Hz);
+    SET_FARVAR(seg, info->standard_timing[2], VBE_EDID_STD_1024x768_85Hz);
+    SET_FARVAR(seg, info->standard_timing[3], VBE_EDID_STD_1280x720_70Hz);
+    SET_FARVAR(seg, info->standard_timing[4], VBE_EDID_STD_1280x960_60Hz);
+    SET_FARVAR(seg, info->standard_timing[5], VBE_EDID_STD_1440x900_60Hz);
+    SET_FARVAR(seg, info->standard_timing[6], VBE_EDID_STD_1600x1200_60Hz);
+    SET_FARVAR(seg, info->standard_timing[7], VBE_EDID_STD_1680x1050_60Hz);
+    /* detailed timing blocks */
+    int dtd_block=0; /* VBE_EDID_DTD_1152x864 */
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.pixel_clock,                 WORDBE(0x302a));
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_addressable_low,  0x80);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_blanking_low,     0xC0);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_high,             0x41);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_addressable_low,    0x60);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_blanking_low,       0x24);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_high,               0x30);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_front_porch_low,  0x40);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_sync_pulse_low,   0x80);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_low4,               0x13);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_vertical_sync_hi, 0x00);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_video_image_low,  0x2C);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_video_image_low,    0xE1);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.video_image_high,            0x10);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_border,           0x00);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_border,             0x00);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.features,                    0x1E);
+    dtd_block = 1; /* VBE_EDID_DTD_1280x1024 */
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.pixel_clock,                 WORDBE(0x302a));
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_addressable_low,  0x00);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_blanking_low,     0x98);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_high,             0x51);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_addressable_low,    0x00);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_blanking_low,       0x2A);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_high,               0x40);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_front_porch_low,  0x30);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_sync_pulse_low,   0x70);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_low4,               0x13);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_vertical_sync_hi, 0x00);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_video_image_low,  0x2C);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_video_image_low,    0xE1);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.video_image_high,            0x10);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_border,           0x00);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_border,             0x00);
+        SET_FARVAR(seg, info->desc[dtd_block].dtd.features,                    0x1E);
+    /* serial */
+    dtd_block = 2;
+        for (i = 0; i < 5; i++) {
+            SET_FARVAR(seg, info->desc[dtd_block].mtxtd.header[i], 0);
+        }
+        SET_FARVAR(seg, info->desc[dtd_block].mtxtd.header[3], 0xFF);
+        for (i = 0; i < 10; i++) {
+            SET_FARVAR(seg, info->desc[dtd_block].mtxtd.text[i], i+0x30);
+        }
+        SET_FARVAR(seg, info->desc[dtd_block].mtxtd.text[10], 0x0A);
+        SET_FARVAR(seg, info->desc[dtd_block].mtxtd.text[11], 0x20);
+        SET_FARVAR(seg, info->desc[dtd_block].mtxtd.text[12], 0x20);
+    /* monitor name */
+    dtd_block = 3;
+        for (i = 0; i < 5; i++) {
+             SET_FARVAR(seg, info->desc[dtd_block].mtxtd.header[i], 0);
+        }
+        SET_FARVAR(seg, info->desc[dtd_block].mtxtd.header[3], 0xFC);
+        memcpy_far(seg, info->desc[dtd_block].mtxtd.text, get_global_seg(), vgabios_name, 12);
+        SET_FARVAR(seg, info->desc[dtd_block].mtxtd.text[12], 0x0A);
+    /* ext */
+    SET_FARVAR(seg, info->extensions, 0);
+
+    /* checksum */
+    u8 sum = -checksum_far(get_global_seg(), info, sizeof(info));
+    SET_FARVAR(seg, info->checksum, sum);
 
     return 0;
 }
@@ -470,11 +522,6 @@ bochsvga_init(void)
             SET_VGA(m->mode, 0xffff);
         }
     }
-
-    // Fixup EDID checksum
-    u8 sum = -checksum_far(get_global_seg(), bochsvga_edid,
-                           sizeof(bochsvga_edid));
-    SET_VGA(bochsvga_edid[sizeof (bochsvga_edid) - 1], sum);
 
     return 0;
 }
