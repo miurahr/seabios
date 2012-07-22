@@ -323,6 +323,88 @@ bochsvga_set_mode(struct vgamode_s *vmode_g, int flags)
     return 0;
 }
 
+/****************************************************************
+ * EDID
+ ****************************************************************/
+
+u8 bochsvga_edid[128] VAR16 = {
+    0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, /* 8-byte header */
+    0x04, 0x21,                                     /* Vendor ID ("AAA") */
+    0xAB, 0xCD,                                     /* Product ID */
+    0x00, 0x00, 0x00, 0x00,                         /* Serial number */
+    54,                                             /* Week of manufacture (54) */
+    10,                                             /* Year of manufacture (2000) */
+    0x01, 0x01,                                     /* EDID version number (1.1) */
+    0x0F,                                           /* Video signal interface */
+    0x21, 0x19,                                     /* Scren size (330 mm * 250 mm) */
+    0x78,                                           /* Display gamma (2.2) */
+    0x0D,                                           /* Feature flags */
+    0x78, 0xF5,                                     /* Chromaticity LSB */
+    0xA6, 0x55, 0x48, 0x9B, 0x26, 0x12, 0x50, 0x54, /* Chromaticity MSB */
+    0xFF, 0xEF, 0x80,                               /* Established timings */
+    0x31, 0x59,                                     /* Standard timing #1 (640 x 480 @ 85 Hz) */
+    0x45, 0x59,                                     /* Standard timing #2 (800 x 600 @ 85 Hz) */
+    0x61, 0x59,                                     /* Standard timing #3 (1024 x 768 @ 85 Hz) */
+    0x31, 0x4A,                                     /* Standard timing #4 (640 x 480 @ 70 Hz) */
+    0x81, 0x4A,                                     /* Standard timing #5 (1280 x 960 @ 70 Hz) */
+    0xA9, 0x40,                                     /* Standard timing #6 (1600 x 1200 @ 60 Hz) */
+    0x01, 0x01,                                     /* Standard timing #7 (unused) */
+    0x01, 0x01,                                     /* Standard timing #8 (unused) */
+
+    /* First timing descriptor (1024 x 768) */
+    0x30, 0x2a,                                     /* Pixel clock */
+    0x80,                                           /* hactive low */
+    0xC0,                                           /* hblank low */
+    0x41,                                           /* hactive high, hblank high */
+    0x60,                                           /* vactive low */
+    0x24,                                           /* vblank low  */
+    0x30,                                           /* vactive high, vblank high */
+    0x40,                                           /* hsync offset low */
+    0x80,                                           /* hsync width low */
+    0x13,                                           /* vsync offset low, vsync width low */
+    0x00,                                           /* hsync offset high, hsync width high , vsync offset high, vsync width high */
+    0x2C,                                           /* hsize low */
+    0xE1,                                           /* vsize low */
+    0x10,                                           /* hsize high, vsize high */
+    0x00,                                           /* hborder */
+    0x00,                                           /* vborder */
+    0x1E,                                           /* Features */
+
+    /* Second descriptor */
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00,
+
+    /* Third descriptor - Serial number */
+    0x00, 0x00, 0x00, 0xFF, 0x00,
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '\n', ' ', ' ',
+
+    /* Fourth descriptor - Monitor name */
+    0x00,0x00,0x00,0xFC,0x00,
+    'B', 'o', 'c', 'h', 's', ' ', 'S', 'c', 'r', 'e', 'e', 'n', '\n',
+
+    0x00,                                            /* Extensions */
+    0x00,                                            /* Checksum */
+};
+
+int bochsvga_get_ddc_capabilities(u16 unit)
+{
+    if (unit != 0)
+        return -1;
+
+    return (1 << 8) | VBE_DDC1_PROTOCOL_SUPPORTED;
+}
+
+int bochsvga_read_edid(u16 unit, u16 block, u16 seg, void *data)
+{
+    if (unit != 0 || block != 0)
+        return -1;
+
+    memcpy_far(seg, data, get_global_seg(), bochsvga_edid,
+               sizeof (bochsvga_edid));
+
+    return 0;
+}
 
 /****************************************************************
  * Init
@@ -389,5 +471,11 @@ bochsvga_init(void)
         }
     }
 
+    // Fixup EDID checksum
+    u8 sum = -checksum_far(get_global_seg(), bochsvga_edid,
+                           sizeof(bochsvga_edid));
+    SET_VGA(bochsvga_edid[sizeof (bochsvga_edid) - 1], sum);
+
     return 0;
 }
+
