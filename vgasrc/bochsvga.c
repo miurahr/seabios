@@ -323,8 +323,6 @@ bochsvga_set_mode(struct vgamode_s *vmode_g, int flags)
     return 0;
 }
 
-
-
 int bochsvga_get_ddc_capabilities(u16 unit)
 {
     if (unit != 0)
@@ -334,15 +332,20 @@ int bochsvga_get_ddc_capabilities(u16 unit)
 }
 
 u8 most_chromaticity[8] VAR16 = {0xA6,0x55,0x48,0x9B,0x26,0x12,0x50,0x54};
-unsigned char vgabios_name[] VAR16 = "SeaBIOS VGAB";
+unsigned char vgabios_name[] VAR16 = "Sea VGABIOS";
+struct edid_detailed_timing vbe_edid_dtd_1152x864 VAR16 = {
+     WORDBE(0x302a), 0x80, 0xC0, 0x41, 0x60, 0x24,
+     0x30, 0x40, 0x80, 0x13, 0x00, 0x2C, 0xE1, 0x10,
+     0x00, 0x00, 0x1E};
+struct edid_detailed_timing vbe_edid_dtd_1280x1024 VAR16 = {
+     WORDBE(0x302a), 0x00, 0x98, 0x51, 0x00, 0x2A, 
+     0x40, 0x30, 0x70, 0x13, 0x00, 0x2C, 0xE1, 0x10,
+     0x00, 0x00, 0x1E};
 
-int bochsvga_read_edid(u16 unit, u16 block, u16 seg, void *data)
+int bochsvga_read_edid_block0(u16 unit, u16 block, u16 seg, void *data)
 {
     struct vbe_edid_info  *info = data;
     int i;
-
-    if (unit != 0 || block != 0)
-        return -1;
 
     memset_far(seg, info, 0, sizeof(*info));
     /* header */
@@ -392,62 +395,28 @@ int bochsvga_read_edid(u16 unit, u16 block, u16 seg, void *data)
     SET_FARVAR(seg, info->standard_timing[6], VBE_EDID_STD_1600x1200_60Hz);
     SET_FARVAR(seg, info->standard_timing[7], VBE_EDID_STD_1680x1050_60Hz);
     /* detailed timing blocks */
-    int dtd_block=0; /* VBE_EDID_DTD_1152x864 */
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.pixel_clock,                 WORDBE(0x302a));
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_addressable_low,  0x80);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_blanking_low,     0xC0);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_high,             0x41);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_addressable_low,    0x60);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_blanking_low,       0x24);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_high,               0x30);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_front_porch_low,  0x40);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_sync_pulse_low,   0x80);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_low4,               0x13);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_vertical_sync_hi, 0x00);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_video_image_low,  0x2C);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_video_image_low,    0xE1);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.video_image_high,            0x10);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_border,           0x00);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_border,             0x00);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.features,                    0x1E);
-    dtd_block = 1; /* VBE_EDID_DTD_1280x1024 */
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.pixel_clock,                 WORDBE(0x302a));
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_addressable_low,  0x00);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_blanking_low,     0x98);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_high,             0x51);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_addressable_low,    0x00);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_blanking_low,       0x2A);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_high,               0x40);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_front_porch_low,  0x30);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_sync_pulse_low,   0x70);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_low4,               0x13);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_vertical_sync_hi, 0x00);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_video_image_low,  0x2C);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_video_image_low,    0xE1);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.video_image_high,            0x10);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.horizontal_border,           0x00);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.vertical_border,             0x00);
-        SET_FARVAR(seg, info->desc[dtd_block].dtd.features,                    0x1E);
+    memcpy_far(seg, &(info->desc[0].dtd), get_global_seg(), &vbe_edid_dtd_1152x864,
+               sizeof (vbe_edid_dtd_1152x864));
+    memcpy_far(seg, &(info->desc[1].dtd), get_global_seg(), &vbe_edid_dtd_1280x1024,
+               sizeof (vbe_edid_dtd_1280x1024));
     /* serial */
-    dtd_block = 2;
-        for (i = 0; i < 5; i++) {
-            SET_FARVAR(seg, info->desc[dtd_block].mtxtd.header[i], 0);
-        }
-        SET_FARVAR(seg, info->desc[dtd_block].mtxtd.header[3], 0xFF);
-        for (i = 0; i < 10; i++) {
-            SET_FARVAR(seg, info->desc[dtd_block].mtxtd.text[i], i+0x30);
-        }
-        SET_FARVAR(seg, info->desc[dtd_block].mtxtd.text[10], 0x0A);
-        SET_FARVAR(seg, info->desc[dtd_block].mtxtd.text[11], 0x20);
-        SET_FARVAR(seg, info->desc[dtd_block].mtxtd.text[12], 0x20);
+    for (i = 0; i < 5; i++) {
+        SET_FARVAR(seg, info->desc[2].mtxtd.header[i], 0);
+    }
+    SET_FARVAR(seg, info->desc[2].mtxtd.header[3], 0xFF);
+    for (i = 0; i < 10; i++) {
+        SET_FARVAR(seg, info->desc[2].mtxtd.text[i], i+0x30);
+    }
+    SET_FARVAR(seg, info->desc[2].mtxtd.text[10], 0x0A);
+    SET_FARVAR(seg, info->desc[2].mtxtd.text[11], 0x20);
+    SET_FARVAR(seg, info->desc[2].mtxtd.text[12], 0x20);
     /* monitor name */
-    dtd_block = 3;
-        for (i = 0; i < 5; i++) {
-             SET_FARVAR(seg, info->desc[dtd_block].mtxtd.header[i], 0);
-        }
-        SET_FARVAR(seg, info->desc[dtd_block].mtxtd.header[3], 0xFC);
-        memcpy_far(seg, info->desc[dtd_block].mtxtd.text, get_global_seg(), vgabios_name, 12);
-        SET_FARVAR(seg, info->desc[dtd_block].mtxtd.text[12], 0x0A);
+    for (i = 0; i < 5; i++) {
+         SET_FARVAR(seg, info->desc[3].mtxtd.header[i], 0);
+    }
+    SET_FARVAR(seg, info->desc[3].mtxtd.header[3], 0xFC);
+    memcpy_far(seg, info->desc[3].mtxtd.text, get_global_seg(), vgabios_name, 12);
+    SET_FARVAR(seg, info->desc[3].mtxtd.text[12], 0x0A);
     /* ext */
     SET_FARVAR(seg, info->extensions, 0);
 
@@ -456,6 +425,19 @@ int bochsvga_read_edid(u16 unit, u16 block, u16 seg, void *data)
     SET_FARVAR(seg, info->checksum, sum);
 
     return 0;
+}
+
+int bochsvga_read_edid(u16 unit, u16 block, u16 seg, void *data)
+{
+    if (unit != 0)
+        return -1;
+
+    switch (block) {
+    case 0:
+        return bochsvga_read_edid_block0(unit, block, seg, data);
+    default:
+        return -1;
+    }
 }
 
 /****************************************************************
