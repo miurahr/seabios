@@ -188,7 +188,8 @@ $(OUT)bios.bin.elf $(OUT)bios.bin: $(OUT)rom.o tools/checkrom.py
 SRCVGA=src/output.c src/util.c src/pci.c \
     vgasrc/vgabios.c vgasrc/vgafb.c vgasrc/vgafonts.c vgasrc/vbe.c \
     vgasrc/stdvga.c vgasrc/stdvgamodes.c vgasrc/stdvgaio.c \
-    vgasrc/clext.c vgasrc/bochsvga.c vgasrc/geodevga.c
+    vgasrc/clext.c vgasrc/bochsvga.c vgasrc/geodevga.c \
+    vgasrc/vbe_edid.c
 
 CFLAGS16VGA = $(CFLAGS16INC) -Isrc
 
