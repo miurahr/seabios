@@ -1,3 +1,9 @@
+seabios (1.7.0-git20120804) precise; urgency=low
+
+  * git snapshot update
+
+ -- Hiroshi Miura <miurahr@miurahr-note>  Sat, 04 Aug 2012 15:00:45 +0900
+
 seabios (1.7.0-git20120721) precise; urgency=low
 
   * git snapshot package.
