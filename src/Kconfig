@@ -119,6 +119,12 @@ menu "Hardware support"
         default y
         help
             Support boot from virtio-scsi storage.
+    config LSI_SCSI
+        depends on DRIVES && !COREBOOT
+        bool "lsi53c895a scsi controllers"
+        default y
+        help
+            Support boot from qemu-emulated lsi53c895a scsi storage.
     config FLOPPY
         depends on DRIVES
         bool "Floppy controller"
@@ -161,7 +167,13 @@ menu "Hardware support"
         bool "USB drives"
         default y
         help
-            Support USB disks.
+            Support USB BOT (bulk-only transport) disks.
+    config USB_UAS
+        depends on USB && DRIVES
+        bool "UAS drives"
+        default y
+        help
+            Support USB UAS (usb attached scsi) disks.
     config USB_HUB
         depends on USB
         bool "USB hubs"

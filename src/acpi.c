@@ -327,7 +327,7 @@ build_madt(void)
         apic->length = sizeof(*apic);
         apic->processor_id = i;
         apic->local_apic_id = i;
-        if (i < CountCPUs)
+        if (apic_id_is_present(apic->local_apic_id))
             apic->flags = cpu_to_le32(1);
         else
             apic->flags = cpu_to_le32(0);
@@ -336,7 +336,7 @@ build_madt(void)
     struct madt_io_apic *io_apic = (void*)apic;
     io_apic->type = APIC_IO;
     io_apic->length = sizeof(*io_apic);
-    io_apic->io_apic_id = CountCPUs;
+    io_apic->io_apic_id = BUILD_IOAPIC_ID;
     io_apic->address = cpu_to_le32(BUILD_IOAPIC_ADDR);
     io_apic->interrupt = cpu_to_le32(0);
 
@@ -445,6 +445,7 @@ build_ssdt(void)
     }
 
     // build "Method(NTFY, 2) {If (LEqual(Arg0, 0x00)) {Notify(CP00, Arg1)} ...}"
+    // Arg0 = Processor ID = APIC ID
     *(ssdt_ptr++) = 0x14; // MethodOp
     ssdt_ptr = encodeLen(ssdt_ptr, 2+5+(12*acpi_cpus), 2);
     *(ssdt_ptr++) = 'N';
@@ -477,7 +478,7 @@ build_ssdt(void)
     ssdt_ptr = encodeLen(ssdt_ptr, 2+1+(1*acpi_cpus), 2);
     *(ssdt_ptr++) = acpi_cpus;
     for (i=0; i<acpi_cpus; i++)
-        *(ssdt_ptr++) = (i < CountCPUs) ? 0x01 : 0x00;
+        *(ssdt_ptr++) = (apic_id_is_present(i)) ? 0x01 : 0x00;
 
     // store pci io windows: start, end, length
     // this way we don't have to do the math in the dsdt
@@ -656,10 +657,10 @@ build_srat(void)
         core->proximity_lo = curnode;
         memset(core->proximity_hi, 0, 3);
         core->local_sapic_eid = 0;
-        if (i < CountCPUs)
+        if (apic_id_is_present(i))
             core->flags = cpu_to_le32(1);
         else
-            core->flags = 0;
+            core->flags = cpu_to_le32(0);
         core++;
     }
 
