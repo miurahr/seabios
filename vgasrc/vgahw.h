@@ -8,6 +8,7 @@
 #include "bochsvga.h" // bochsvga_set_mode
 #include "stdvga.h" // stdvga_set_mode
 #include "geodevga.h" // geodevga_init
+#include "vbe_edid.h"
 
 static inline struct vgamode_s *vgahw_find_mode(int mode) {
     if (CONFIG_VGA_CIRRUS)

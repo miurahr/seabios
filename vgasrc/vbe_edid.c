@@ -104,7 +104,7 @@ int vesa_read_edid_block0(u16 unit, u16 block, u16 seg, void *data, u8 next)
     memcpy_far(seg, info->desc[3].mtxtd.text, get_global_seg(), vgabios_name, 12);
     SET_FARVAR(seg, info->desc[3].mtxtd.text[12], 0x0A);
     /* ext */
-    SET_FARVAR(seg, info->extensions, 0);
+    SET_FARVAR(seg, info->extensions, next);
 
     /* checksum */
     u8 sum = -checksum_far(get_global_seg(), info, sizeof(info));
@@ -120,7 +120,7 @@ int vesa_read_edid(u16 unit, u16 block, u16 seg, void *data)
 
     switch (block) {
     case 0:
-        return vesa_read_edid_block0(unit, block, seg, data);
+        return vesa_read_edid_block0(unit, block, seg, data, 0);
     default:
         return -1;
     }
