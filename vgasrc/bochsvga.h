@@ -24,6 +24,8 @@
 #define VBE_DISPI_INDEX_X_OFFSET         0x8
 #define VBE_DISPI_INDEX_Y_OFFSET         0x9
 #define VBE_DISPI_INDEX_VIDEO_MEMORY_64K 0xa
+#define VBE_DISPI_INDEX_DDC_CAPS         0xb
+#define VBE_DISPI_INDEX_DDC_EDID         0xc
 
 #define VBE_DISPI_ID0                    0xB0C0
 #define VBE_DISPI_ID1                    0xB0C1
@@ -31,6 +33,7 @@
 #define VBE_DISPI_ID3                    0xB0C3
 #define VBE_DISPI_ID4                    0xB0C4
 #define VBE_DISPI_ID5                    0xB0C5
+#define VBE_DISPI_ID6                    0xB0C6
 
 #define VBE_DISPI_DISABLED               0x00
 #define VBE_DISPI_ENABLED                0x01
@@ -40,6 +43,9 @@
 #define VBE_DISPI_NOCLEARMEM             0x80
 
 #define VBE_DISPI_LFB_PHYSICAL_ADDRESS   0xE0000000
+
+#define VBE_DISPI_DDC_BLOCK0             0x00
+#define VBE_DISPI_DDC_BLOCK1             0x01
 
 static inline u16 dispi_read(u16 reg)
 {
@@ -66,6 +72,8 @@ int bochsvga_size_state(int states);
 int bochsvga_save_state(u16 seg, void *data, int states);
 int bochsvga_restore_state(u16 seg, void *data, int states);
 int bochsvga_set_mode(struct vgamode_s *vmode_g, int flags);
+int bochsvga_get_ddc_capabilities(u16 unit);
+int bochsvga_read_edid(u16 unit, u16 block, u16 seg, void *data);
 int bochsvga_init(void);
 
 #endif // bochsvga.h

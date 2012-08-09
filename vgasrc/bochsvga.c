@@ -15,6 +15,7 @@
 #include "stdvga.h" // VGAREG_SEQU_ADDRESS
 #include "pci.h" // pci_config_readl
 #include "pci_regs.h" // PCI_BASE_ADDRESS_0
+#include "vbe_edid.h" // vesa_read_edid
 
 /****************************************************************
  * Mode tables
@@ -322,6 +323,52 @@ bochsvga_set_mode(struct vgamode_s *vmode_g, int flags)
     return 0;
 }
 
+int bochsvga_get_ddc_capabilities(u16 unit)
+{
+    u16 caps;
+
+    /* fall back */
+    if (dispi_read(VBE_DISPI_INDEX_ID) < VBE_DISPI_ID6)
+        return vesa_get_ddc_capabilities(unit);
+
+    if (unit != 0)
+        return -1;
+
+    caps = dispi_read(VBE_DISPI_INDEX_DDC_CAPS);
+
+    return (int) caps; 
+}
+
+int bochsvga_read_edid(u16 unit, u16 block, u16 seg, void *data)
+{
+    int i;
+    u16 val;
+    u16 *buf = data;
+
+    /* fall back */
+    if (dispi_read(VBE_DISPI_INDEX_ID) < VBE_DISPI_ID6)
+        return vesa_read_edid(unit, block, seg, data);
+
+    /* get EDID record from bochs or qemu */
+    if (unit != 0)
+        return -1;
+
+    if (block == 0) {
+        dispi_write(VBE_DISPI_INDEX_DDC, VBE_DISPI_DDC_BLOCK0);
+    } else {
+        dispi_write(VBE_DISPI_INDEX_DDC, VBE_DISPI_DDC_BLOCK1);
+    }
+
+    for (i = 0; i < 64; i++)
+        val = dispi_read(VBE_DISPI_INDEX_DDC);
+        SET_FARVAR(seg, buf, val);
+        buf++;
+    }
+
+    return  0;
+}
+
+
 /****************************************************************
  * Init
  ****************************************************************/
@@ -329,10 +376,12 @@ bochsvga_set_mode(struct vgamode_s *vmode_g, int flags)
 int
 bochsvga_init(void)
 {
+    u16 supported_version;
     int ret = stdvga_init();
     if (ret)
         return ret;
 
+    supported_version = dispi_read(VBE_DISPI_INDEX_ID);
     /* Sanity checks */
     dispi_write(VBE_DISPI_INDEX_ID, VBE_DISPI_ID0);
     if (dispi_read(VBE_DISPI_INDEX_ID) != VBE_DISPI_ID0) {
@@ -340,7 +389,14 @@ bochsvga_init(void)
         return -1;
     }
 
-    dispi_write(VBE_DISPI_INDEX_ID, VBE_DISPI_ID5);
+    if (supported_version == VBE_DISPI_ID6) {
+        dispi_write(VBE_DISPI_INDEX_ID, VBE_DISPI_ID6);
+    } else if (supported_version == VBE_DISPI_ID5) {
+        dispi_write(VBE_DISPI_INDEX_ID, VBE_DISPI_ID5);
+    } else {
+        dprintf(1, "VBE DISPI interface version is too old.\n");
+        return -1;
+    }
 
     if (GET_GLOBAL(HaveRunInit))
         return 0;
