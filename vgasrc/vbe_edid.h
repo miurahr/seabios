@@ -122,10 +122,13 @@ struct vbe_edid_info {
 #define VBE_EDID_STD_800x600_85Hz                        0x5945
 #define VBE_EDID_STD_1024x768_85Hz                       0x5961
 #define VBE_EDID_STD_1280x720_70Hz                       0xCA81
+#define VBE_EDID_STD_1280x800_70Hz                       0x0A81
 #define VBE_EDID_STD_1280x960_60Hz                       0x4A81
 #define VBE_EDID_STD_1440x900_60Hz                       0x0095
 #define VBE_EDID_STD_1600x1200_60Hz                      0x40A9
+#define VBE_EDID_STD_1600x900_60Hz                       0xC0A9
 #define VBE_EDID_STD_1680x1050_60Hz                      0x00B3
+#define VBE_EDID_STD_1920x1080_60Hz                      0xC0D1
 #define VBE_EDID_STD_NOP                                 0x0101
 
 int vesa_get_ddc_capabilities(u16 unit);
