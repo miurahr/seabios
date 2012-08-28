@@ -371,6 +371,7 @@ bochsvga_init(void)
     u16 en = dispi_read(VBE_DISPI_INDEX_ENABLE);
     dispi_write(VBE_DISPI_INDEX_ENABLE, en | VBE_DISPI_GETCAPS);
     u16 max_xres = dispi_read(VBE_DISPI_INDEX_XRES);
+    u16 max_yres = dispi_read(VBE_DISPI_INDEX_YRES);
     u16 max_bpp = dispi_read(VBE_DISPI_INDEX_BPP);
     dispi_write(VBE_DISPI_INDEX_ENABLE, en);
     struct bochsvga_mode *m = bochsvga_modes;
@@ -386,6 +387,7 @@ bochsvga_init(void)
             SET_VGA(m->mode, 0xffff);
         }
     }
+    vesa_set_prefered_mode(max_xres, max_yres);
 
     return 0;
 }
