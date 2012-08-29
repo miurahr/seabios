@@ -1,8 +1,9 @@
-seabios (1.7.0-git20120804) precise; urgency=low
+seabios (1.7.0-git20120829) precise; urgency=low
 
   * git snapshot update
+  * vbe edid prefered mode. 
 
- -- Hiroshi Miura <miurahr@miurahr-note>  Sat, 04 Aug 2012 15:00:45 +0900
+ -- Hiroshi Miura <miurahr@linux.com>  Wed, 29 Aug 2012 08:48:27 +0900
 
 seabios (1.7.0-git20120721) precise; urgency=low
 
