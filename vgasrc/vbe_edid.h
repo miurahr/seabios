@@ -113,6 +113,8 @@ struct vbe_edid_info {
     u8 checksum;
 } PACKED;
 
+struct prefered_mode_info {u16 x; u16 y;} PACKED;
+
 /* EDID Standard Timing Description */
 
 /* First byte: X resolution, divided by 8, less 31 (256–2288 pixels) */
@@ -133,6 +135,8 @@ struct vbe_edid_info {
 #define VBE_EDID_STD_1920x1080_60Hz                      0xC0D1
 #define VBE_EDID_STD_NOP                                 0x0101
 
+int vesa_set_prefered_mode(u16 x, u16 y);
+int vesa_get_prefered_mode(u16 seg, void *data);
 int vesa_get_ddc_capabilities(u16 unit);
 int vesa_read_edid(u16 unit, u16 block, u16 seg, void *data);
 #endif /* vbe_edid.h */

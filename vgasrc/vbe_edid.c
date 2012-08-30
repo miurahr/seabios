@@ -5,6 +5,7 @@
 // This file may be distributed under the terms of the GNU LGPLv3 license.
 
 #include "vbe.h" // VBE_CAPABILITY_8BIT_DAC
+#include "biosvar.h" // GET_GLOBAL
 #include "util.h" // dprintf
 #include "config.h" // CONFIG_*
 #include "vbe_edid.h"
@@ -36,10 +37,65 @@ struct edid_detailed_timing vbe_edid_dtd_1600x1200 VAR16 = {
      0x40, 0x40, 0xC0, 0x13, 0x00, 0x2C, 0xE1, 0x10,
      0x00, 0x00, 0x1E};
 
+struct edid_monitor_range_limit vbe_edid_range VAR16 = {
+   {0x00,0x00,0x00,0xfD,0x00},
+   50,150,   /* Vertical 50Hz - 150Hz */
+   31,135,   /* Horiz 31kHz - 135kHz */
+   20,       /* clock 200MHz */
+   0, /* no ext */
+   0x0A,0x20,0x20,
+   0x2020,
+   0x20,0x20 /* padding */
+   };
+
+static struct prefered_mode_info prefered_mode VAR16 = {0, 0};
+
+int vesa_set_prefered_mode(u16 x, u16 y) {
+
+    SET_VGA(prefered_mode.x, x);
+    SET_VGA(prefered_mode.y, y);
+    return 0;
+}
+
+int vesa_get_prefered_mode(u16 seg, void *data) {
+   struct prefered_mode_info *info = data;
+   int a, b;
+
+    a = GET_GLOBAL(prefered_mode.x);
+    b = GET_GLOBAL(prefered_mode.y);
+    SET_FARVAR(seg, info->x, a);
+    SET_FARVAR(seg, info->y, b);
+    return 0;
+}
+
+static void get_prefered_resolution(struct edid_detailed_timing *dtd, u16 *x, u16 *y) {
+    u16 maxx, maxy;
+
+    maxx = GET_GLOBAL(prefered_mode.x);
+    maxy = GET_GLOBAL(prefered_mode.y);
+    if (maxx == 0 && maxy == 0) {/* unknown, no-preference */
+        dtd = &vbe_edid_dtd_1920x1080;
+        maxx = 1920; maxy = 1080;
+    } else if (maxx >= 1920 && (maxy >= 1080 || maxy == 0)){
+        dtd = &vbe_edid_dtd_1920x1080;
+        maxx = 1920; maxy = 1080;
+    } else if (maxx >= 1600 && (maxy >= 1200 || maxy == 0)){
+        dtd = &vbe_edid_dtd_1600x1200;
+        maxx = 1600; maxy = 1200;
+    } else {
+        dtd = &vbe_edid_dtd_1280x1024;
+        maxx = 1280; maxy = 1024;
+    }
+    *x = maxx; *y = maxy;
+}
+
 int vesa_read_edid_block0(u16 unit, u16 block, u16 seg, void *data, u8 next)
 {
-    struct vbe_edid_info  *info = data;
-    int i;
+    struct vbe_edid_info *info = data;
+    struct edid_detailed_timing *dtd = &vbe_edid_dtd_1920x1080;
+    u16 max_x=1920;
+    u16 max_y=1080;
+    int i,j;
 
     memset_far(seg, info, 0, sizeof(*info));
     /* header */
@@ -67,7 +123,7 @@ int vesa_read_edid_block0(u16 unit, u16 block, u16 seg, void *data, u8 next)
     SET_FARVAR(seg, info->screen_width,0x21);
     SET_FARVAR(seg, info->screen_height,0x19); /* 330 mm * 250 mm */
     SET_FARVAR(seg, info->gamma,0x78); /* 2.2 */
-    SET_FARVAR(seg, info->feature_flag,0x0D); /* no DMPS states, RGB, display is continuous frequency */
+    SET_FARVAR(seg, info->feature_flag,0x0F); /* no DMPS states, RGB, display is continuous frequency, prefered mode */
     SET_FARVAR(seg, info->least_chromaticity[0],0x78);
     SET_FARVAR(seg, info->least_chromaticity[1],0xF5);
     memcpy_far(seg, info->most_chromaticity, get_global_seg(), most_chromaticity,
@@ -80,19 +136,39 @@ int vesa_read_edid_block0(u16 unit, u16 block, u16 seg, void *data, u8 next)
        800x600@56Hz, 800x600@60Hz, 800x600@72Hz, 800x600@75Hz, 832x624@75Hz, 1152x870@75Hz,
        not 1024x768@87Hz(I), 1024x768@60Hz, 1024x768@70Hz, 1024x768@75Hz, 1280x1024@75Hz */
     /* standard timings */
+    get_prefered_resolution(dtd, &max_x, &max_y);
     SET_FARVAR(seg, info->standard_timing[0], VBE_EDID_STD_640x480_85Hz);
     SET_FARVAR(seg, info->standard_timing[1], VBE_EDID_STD_800x600_85Hz);
-    SET_FARVAR(seg, info->standard_timing[2], VBE_EDID_STD_1024x768_85Hz);
-    SET_FARVAR(seg, info->standard_timing[3], VBE_EDID_STD_1280x720_70Hz);
-    SET_FARVAR(seg, info->standard_timing[4], VBE_EDID_STD_1280x960_60Hz);
-    SET_FARVAR(seg, info->standard_timing[5], VBE_EDID_STD_1440x900_60Hz);
-    SET_FARVAR(seg, info->standard_timing[6], VBE_EDID_STD_1600x1200_60Hz);
-    SET_FARVAR(seg, info->standard_timing[7], VBE_EDID_STD_1680x1050_60Hz);
-    /* detailed timing blocks */
-    memcpy_far(seg, &(info->desc[0].dtd), get_global_seg(), &vbe_edid_dtd_1152x864,
-               sizeof (vbe_edid_dtd_1152x864));
-    memcpy_far(seg, &(info->desc[1].dtd), get_global_seg(), &vbe_edid_dtd_1280x1024,
-               sizeof (vbe_edid_dtd_1280x1024));
+    j=2;
+    if (max_x >= 1152 && max_x < 1024) {
+        SET_FARVAR(seg, info->standard_timing[2], VBE_EDID_STD_1152x864_70Hz);
+        j=3;
+    } else if (max_x >= 1024 && max_x < 1280) {
+        SET_FARVAR(seg, info->standard_timing[2], VBE_EDID_STD_1152x864_70Hz);
+        SET_FARVAR(seg, info->standard_timing[3], VBE_EDID_STD_1024x768_85Hz);
+        j=4;
+    } else if (max_x >= 1280 && max_x < 1600) {
+        SET_FARVAR(seg, info->standard_timing[2], VBE_EDID_STD_1024x768_85Hz);
+        SET_FARVAR(seg, info->standard_timing[3], VBE_EDID_STD_1280x1024_60Hz);
+        j=4;
+    } else if (max_x >= 1600 && max_x < 1920) {
+        SET_FARVAR(seg, info->standard_timing[3], VBE_EDID_STD_1440x900_60Hz);
+        SET_FARVAR(seg, info->standard_timing[4], VBE_EDID_STD_1600x900_60Hz);
+        j=5;
+    } else {
+        SET_FARVAR(seg, info->standard_timing[2], VBE_EDID_STD_1600x900_60Hz);
+        SET_FARVAR(seg, info->standard_timing[3], VBE_EDID_STD_1920x1080_60Hz);
+        j=4;
+    }
+    for (i = j; i < 8; i++) { /* FILL with NOP */
+        SET_FARVAR(seg, info->standard_timing[i], VBE_EDID_STD_NOP);
+    }
+    /* detailed timing block */
+    memcpy_far(seg, &(info->desc[0].dtd), get_global_seg(), dtd,
+               sizeof (struct edid_detailed_timing));
+    /* monitor range */
+    memcpy_far(seg, &(info->desc[1].mrld), get_global_seg(), &vbe_edid_range,
+               sizeof(vbe_edid_range));
     /* serial */
     for (i = 0; i < 5; i++) {
         SET_FARVAR(seg, info->desc[2].mtxtd.header[i], 0);
