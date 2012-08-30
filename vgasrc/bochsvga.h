@@ -67,7 +67,5 @@ int bochsvga_save_state(u16 seg, void *data, int states);
 int bochsvga_restore_state(u16 seg, void *data, int states);
 int bochsvga_set_mode(struct vgamode_s *vmode_g, int flags);
 int bochsvga_init(void);
-int bochsvga_get_ddc_capabilities(u16 unit);
-int bochsvga_read_edid(u16 unit, u16 block, u16 seg, void *data);
 
 #endif // bochsvga.h

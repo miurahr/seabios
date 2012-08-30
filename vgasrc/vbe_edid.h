@@ -128,7 +128,11 @@ struct vbe_edid_info {
 #define VBE_EDID_STD_1280x1024_60Hz                      0x8081
 #define VBE_EDID_STD_1440x900_60Hz                       0x0095
 #define VBE_EDID_STD_1600x1200_60Hz                      0x40A9
+#define VBE_EDID_STD_1600x900_60Hz                       0xC0A9
 #define VBE_EDID_STD_1680x1050_60Hz                      0x00B3
+#define VBE_EDID_STD_1920x1080_60Hz                      0xC0D1
 #define VBE_EDID_STD_NOP                                 0x0101
 
+int vesa_get_ddc_capabilities(u16 unit);
+int vesa_read_edid(u16 unit, u16 block, u16 seg, void *data);
 #endif /* vbe_edid.h */
