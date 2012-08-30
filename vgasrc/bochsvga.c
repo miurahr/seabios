@@ -82,12 +82,15 @@ static struct bochsvga_mode
     { 0x184, { MM_DIRECT, 1680, 1050, 16, 8, 16, SEG_GRAPH } },
     { 0x185, { MM_DIRECT, 1680, 1050, 24, 8, 16, SEG_GRAPH } },
     { 0x186, { MM_DIRECT, 1680, 1050, 32, 8, 16, SEG_GRAPH } },
-    { 0x187, { MM_DIRECT, 1920, 1200, 16, 8, 16, SEG_GRAPH } },
-    { 0x188, { MM_DIRECT, 1920, 1200, 24, 8, 16, SEG_GRAPH } },
-    { 0x189, { MM_DIRECT, 1920, 1200, 32, 8, 16, SEG_GRAPH } },
-    { 0x18a, { MM_DIRECT, 2560, 1600, 16, 8, 16, SEG_GRAPH } },
-    { 0x18b, { MM_DIRECT, 2560, 1600, 24, 8, 16, SEG_GRAPH } },
-    { 0x18c, { MM_DIRECT, 2560, 1600, 32, 8, 16, SEG_GRAPH } },
+    { 0x187, { MM_DIRECT, 1920, 1080, 16, 8, 16, SEG_GRAPH } },
+    { 0x188, { MM_DIRECT, 1920, 1080, 24, 8, 16, SEG_GRAPH } },
+    { 0x189, { MM_DIRECT, 1920, 1080, 32, 8, 16, SEG_GRAPH } },
+    { 0x18a, { MM_DIRECT, 1920, 1200, 16, 8, 16, SEG_GRAPH } },
+    { 0x18b, { MM_DIRECT, 1920, 1200, 24, 8, 16, SEG_GRAPH } },
+    { 0x18c, { MM_DIRECT, 1920, 1200, 32, 8, 16, SEG_GRAPH } },
+    { 0x18d, { MM_DIRECT, 2560, 1600, 16, 8, 16, SEG_GRAPH } },
+    { 0x18e, { MM_DIRECT, 2560, 1600, 24, 8, 16, SEG_GRAPH } },
+    { 0x18f, { MM_DIRECT, 2560, 1600, 32, 8, 16, SEG_GRAPH } },
 };
 
 static int is_bochsvga_mode(struct vgamode_s *vmode_g)
