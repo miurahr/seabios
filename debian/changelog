@@ -1,3 +1,10 @@
+seabios (1.7.1-git20120909) precise; urgency=low
+
+  * upstream rel 1.7.1
+  * edid support
+
+ -- Hiroshi Miura <miurahr@miurahr-note>  Sun, 09 Sep 2012 11:22:37 +0900
+
 seabios (1.7.0-git20120829) precise; urgency=low
 
   * git snapshot update
